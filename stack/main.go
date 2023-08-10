@@ -1,59 +1,97 @@
 package main
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
-// Stack represents a stack data structure
-type Stack struct {
-	data []interface{}
+var ErrStackIsEmpty = errors.New("stack is empty")
+
+var defaultCapacity = 1000000
+
+// stack represents a stack data structure
+type stack struct {
+	top      int
+	capacity int
+	data     []interface{}
+}
+
+type Stack interface {
+	Push(item interface{}) (interface{}, error)
+	Pop() (interface{}, error)
+	Peek() (interface{}, error)
+	IsEmpty() bool
+}
+
+// NewStack creates a new stack
+func NewStack(capacity int) Stack {
+	if capacity < defaultCapacity {
+		capacity = defaultCapacity
+	}
+
+	return &stack{
+		capacity: capacity,
+		top:      -1,
+		data:     make([]interface{}, capacity),
+	}
 }
 
 // Push adds an element to the top of the stack
-func (s *Stack) Push(item interface{}) {
-	s.data = append(s.data, item)
+func (s *stack) Push(item interface{}) (interface{}, error) {
+	s.top = (s.top + 1) % s.capacity
+	s.data[s.top] = item
+
+	return item, nil
 }
 
 // Pop removes and returns the topmost element from the stack
-func (s *Stack) Pop() interface{} {
+func (s *stack) Pop() (interface{}, error) {
 	if s.IsEmpty() {
-		panic("Stack is empty")
+		return nil, ErrStackIsEmpty
 	}
-	index := len(s.data) - 1
-	item := s.data[index]
-	s.data = s.data[:index]
-	return item
+
+	item := s.data[s.top]
+	s.data[s.top] = nil
+	s.top = (s.top - 1) % s.capacity
+
+	return item, nil
 }
 
-// Peek returns the topmost element from the stack without removing it
-func (s *Stack) Peek() interface{} {
+// Peek returns the top element from the stack without removing it
+func (s *stack) Peek() (interface{}, error) {
 	if s.IsEmpty() {
-		panic("Stack is empty")
+		return nil, ErrStackIsEmpty
 	}
-	index := len(s.data) - 1
-	return s.data[index]
+
+	return s.data[s.top], nil
 }
 
 // IsEmpty checks if the stack is empty
-func (s *Stack) IsEmpty() bool {
-	return len(s.data) == 0
-}
-
-// Size returns the number of elements in the stack
-func (s *Stack) Size() int {
-	return len(s.data)
+func (s *stack) IsEmpty() bool {
+	return s.top == -1
 }
 
 // Example usage
 func main() {
-	stack := Stack{}
+	stack := NewStack(3)
 
 	// Push elements to the stack
-	stack.Push(10)
-	stack.Push(20)
-	stack.Push(30)
+	if _, err := stack.Push(10); err != nil {
+		fmt.Printf("Error when adding item in stack: %v\n", err)
+	}
+	if _, err := stack.Push("20 is a number"); err != nil {
+		fmt.Printf("Error when adding item in stack: %v\n", err)
+	}
+	if _, err := stack.Push(30.1); err != nil {
+		fmt.Printf("Error when adding item in stack: %v\n", err)
+	}
 
 	// Pop and print elements from the stack
 	for !stack.IsEmpty() {
-		item := stack.Pop()
-		fmt.Println(item)
+		item, err := stack.Pop()
+		fmt.Printf("Removing item from stack: %v\n", item)
+		if err != nil {
+			fmt.Printf("Error when removing %v in stack: %v\n", item, err)
+		}
 	}
 }
